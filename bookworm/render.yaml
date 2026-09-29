@@ -2,28 +2,24 @@
 # Deploys the full BookWorm stack to Render.com from a single file.
 #
 # Services created:
-#   bookworm-backend     — Node.js API  (Web Service, Docker)
-#   bookworm-shell       — Shell SPA    (Web Service, Docker)
-#   bookworm-mfe-auth    — Auth MFE     (Web Service, Docker)
-#   bookworm-mfe-store   — Store MFE    (Web Service, Docker)
-#   bookworm-mfe-checkout — Checkout MFE (Web Service, Docker)
-#   bookworm-db          — PostgreSQL   (Render managed database)
+#   bookworm-backend      — Node.js API   (Web Service, Docker)
+#   bookworm-shell        — Shell SPA     (Web Service, Docker)
+#   bookworm-mfe-auth     — Auth MFE      (Web Service, Docker)
+#   bookworm-mfe-store    — Store MFE     (Web Service, Docker)
+#   bookworm-mfe-checkout — Checkout MFE  (Web Service, Docker)
+#   bookworm-db           — PostgreSQL    (Render managed database)
 #
 # HOW TO DEPLOY:
 #   1. Push this repo to GitHub (public or private).
 #   2. Go to https://dashboard.render.com/blueprints
 #   3. Click "New Blueprint Instance" → connect your repo → select this file.
-#   4. Render will ask you to fill in the secret env vars marked sync: false.
-#      Generate them with:
+#   4. Render will ask you to fill in vars marked  sync: false  — enter them.
+#      Generate secrets with:
 #        node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
-#   5. After first deploy, grab the 5 service URLs from the Render dashboard
-#      and update the ALLOWED_ORIGINS and MFE_*_URL env vars (see notes below).
-#
-# NOTE ON MFE URLS:
-#   The shell webpack bundle bakes in the MFE remote URLs at build time.
-#   After first deploy you know the URLs → update MFE_AUTH_URL / MFE_STORE_URL /
-#   MFE_CHECKOUT_URL on the shell service and redeploy.
-#   On subsequent deploys they are already correct.
+#   5. After the first deploy copy the 5 *.onrender.com URLs and update:
+#        bookworm-backend  → ALLOWED_ORIGINS  (all 4 frontend URLs, comma-separated)
+#        bookworm-shell    → MFE_AUTH_URL / MFE_STORE_URL / MFE_CHECKOUT_URL
+#      Then click "Manual Deploy" on bookworm-shell.
 # ─────────────────────────────────────────────────────────────────────────────
 
 databases:
@@ -38,9 +34,8 @@ services:
   - type: web
     name: bookworm-backend
     runtime: docker
-    # Root of the Docker build context is bookworm/backend
-    dockerfilePath: ./bookworm/backend/Dockerfile
-    rootDir: ./bookworm/backend
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     plan: free
     healthCheckPath: /health
     envVars:
@@ -69,31 +64,30 @@ services:
           name: bookworm-db
           property: password
       - key: JWT_SECRET
-        sync: false   # ← you enter this in the Render dashboard
+        sync: false
       - key: JWT_REFRESH_SECRET
-        sync: false   # ← you enter this in the Render dashboard
+        sync: false
       - key: JWT_EXPIRES_IN
         value: 15m
       - key: JWT_REFRESH_EXPIRES_IN
         value: 7d
-      # Comma-separated list of your frontend Render URLs
-      # Update after first deploy with the actual *.onrender.com URLs
-      # Example: https://bookworm-shell.onrender.com,https://bookworm-mfe-auth.onrender.com,...
+      # Fill in after first deploy — comma-separated list of all 4 frontend URLs
+      # e.g. https://bookworm-shell.onrender.com,https://bookworm-mfe-auth.onrender.com,...
       - key: ALLOWED_ORIGINS
-        sync: false   # ← fill in after you know the frontend service URLs
+        sync: false
 
   # ── Shell SPA ────────────────────────────────────────────────────────────────
+  # dockerContext is the monorepo root so the Dockerfile can COPY shared/
   - type: web
     name: bookworm-shell
     runtime: docker
-    dockerfilePath: ./bookworm/shell/Dockerfile
-    # Build context must be the monorepo root so Dockerfile can COPY shared/
-    rootDir: ./bookworm
+    dockerfilePath: ./shell/Dockerfile
+    dockerContext: .
     plan: free
-    buildArgs:
-      # Replace these with your actual Render service URLs after first deploy.
-      # On first deploy, MFE containers aren't running yet — deploy backend +
-      # MFEs first (they build independently), then update shell and redeploy.
+    envVars:
+      # These become Docker ARGs inside the Dockerfile at build time.
+      # Update to your actual *.onrender.com URLs after first deploy,
+      # then trigger a manual redeploy on this service.
       - key: MFE_AUTH_URL
         value: https://bookworm-mfe-auth.onrender.com
       - key: MFE_STORE_URL
@@ -107,10 +101,10 @@ services:
   - type: web
     name: bookworm-mfe-auth
     runtime: docker
-    dockerfilePath: ./bookworm/mfe-auth/Dockerfile
-    rootDir: ./bookworm
+    dockerfilePath: ./mfe-auth/Dockerfile
+    dockerContext: .
     plan: free
-    buildArgs:
+    envVars:
       - key: API_BASE_URL
         value: https://bookworm-backend.onrender.com
 
@@ -118,10 +112,10 @@ services:
   - type: web
     name: bookworm-mfe-store
     runtime: docker
-    dockerfilePath: ./bookworm/mfe-store/Dockerfile
-    rootDir: ./bookworm
+    dockerfilePath: ./mfe-store/Dockerfile
+    dockerContext: .
     plan: free
-    buildArgs:
+    envVars:
       - key: API_BASE_URL
         value: https://bookworm-backend.onrender.com
 
@@ -129,9 +123,9 @@ services:
   - type: web
     name: bookworm-mfe-checkout
     runtime: docker
-    dockerfilePath: ./bookworm/mfe-checkout/Dockerfile
-    rootDir: ./bookworm
+    dockerfilePath: ./mfe-checkout/Dockerfile
+    dockerContext: .
     plan: free
-    buildArgs:
+    envVars:
       - key: API_BASE_URL
         value: https://bookworm-backend.onrender.com
