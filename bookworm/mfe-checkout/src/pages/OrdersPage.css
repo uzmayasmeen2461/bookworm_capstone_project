@@ -1,0 +1,117 @@
+.orders-page {
+  background-color: #0f0f1a;
+  min-height: calc(100vh - 56px);
+  padding: 20px 24px;
+  color: #e8e8f0;
+}
+
+/* Breadcrumb */
+.orders-breadcrumb {
+  font-size: 13px;
+  color: #8888a8;
+  margin-bottom: 16px;
+}
+.orders-breadcrumb a { color: #4a9eff; text-decoration: none; }
+.orders-breadcrumb a:hover { text-decoration: underline; }
+
+/* Header */
+.orders-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.orders-title { font-size: 22px; font-weight: 700; }
+.orders-count { color: #8888a8; font-size: 13px; }
+
+/* Filter tabs */
+.orders-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.orders-filter-btn {
+  background: transparent;
+  border: 1px solid #2a2a4a;
+  border-radius: 20px;
+  color: #8888a8;
+  font-size: 12px;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-transform: capitalize;
+}
+.orders-filter-btn:hover { border-color: #4a9eff; color: #4a9eff; }
+.orders-filter-btn--active {
+  background-color: rgba(74,158,255,0.12);
+  border-color: #4a9eff;
+  color: #4a9eff;
+  font-weight: 600;
+}
+
+/* Order list */
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Empty state */
+.orders-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+  gap: 12px;
+  text-align: center;
+}
+.orders-empty__icon { font-size: 52px; }
+.orders-empty h2 { color: #e8e8f0; font-size: 18px; }
+.orders-empty p  { color: #8888a8; font-size: 14px; }
+
+/* Loading / gate / error */
+.orders-loading,
+.orders-gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 16px;
+  color: #8888a8;
+  font-size: 14px;
+  background-color: #0f0f1a;
+  text-align: center;
+}
+.orders-gate h2 { color: #e8e8f0; font-size: 20px; }
+
+.orders-error {
+  color: #f87171;
+  font-size: 14px;
+}
+
+.orders-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #2a2a4a;
+  border-top-color: #4a9eff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.btn-primary {
+  background-color: #4a9eff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.btn-primary:hover { background-color: #3a8eef; }

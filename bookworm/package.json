@@ -1,0 +1,22 @@
+{
+  "name": "bookworm",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "shell",
+    "mfe-auth",
+    "mfe-store",
+    "mfe-checkout",
+    "shared",
+    "backend"
+  ],
+  "scripts": {
+    "start": "npm run start --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "shell": "npm run start --workspace=shell",
+    "auth": "npm run start --workspace=mfe-auth",
+    "store": "npm run start --workspace=mfe-store",
+    "checkout": "npm run start --workspace=mfe-checkout",
+    "backend": "npm run start --workspace=backend"
+  }
+}

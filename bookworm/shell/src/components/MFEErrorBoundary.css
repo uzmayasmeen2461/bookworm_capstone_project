@@ -1,0 +1,42 @@
+.mfe-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  padding: 40px;
+  gap: 16px;
+  text-align: center;
+}
+
+.mfe-error__icon {
+  font-size: 48px;
+}
+
+.mfe-error__title {
+  color: #e8e8f0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.mfe-error__message {
+  color: #8888a8;
+  font-size: 14px;
+  max-width: 360px;
+}
+
+.mfe-error__retry {
+  background-color: #4a9eff;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 8px;
+  transition: background-color 0.2s;
+}
+
+.mfe-error__retry:hover {
+  background-color: #3a8eef;
+}

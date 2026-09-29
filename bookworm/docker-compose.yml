@@ -1,0 +1,134 @@
+# ── BookWorm — Docker Compose ─────────────────────────────────────────────────
+# Starts the full stack: PostgreSQL + backend API + 4 MFE frontends.
+#
+# Usage:
+#   docker compose up --build          # first run (builds images + migrates DB)
+#   docker compose up -d               # subsequent runs (detached)
+#   docker compose down -v             # stop + remove volumes
+#
+# Environment:
+#   Copy .env.production.example → .env.production and fill in secrets.
+#   docker compose --env-file .env.production up --build
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: bookworm-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     ${DB_USER:-bookworm}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      POSTGRES_DB:       ${DB_NAME:-bookworm}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5433:5432"   # host 5433 -> container 5432 (avoids local Postgres port 5432 collision)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-bookworm} -d ${DB_NAME:-bookworm}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── Backend API ─────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bookworm-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV:               production
+      PORT:                   5000
+      DB_HOST:                postgres
+      DB_PORT:                5432
+      DB_NAME:                ${DB_NAME:-bookworm}
+      DB_USER:                ${DB_USER:-bookworm}
+      DB_PASSWORD:            ${DB_PASSWORD:?DB_PASSWORD is required}
+      JWT_SECRET:             ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_REFRESH_SECRET:     ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+      JWT_EXPIRES_IN:         ${JWT_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+    ports:
+      - "127.0.0.1:5000:5000"  # expose only on localhost
+    healthcheck:
+      test: ["CMD", "node", "-e",
+        "require('http').get('http://127.0.0.1:5000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # ── DB Migration (one-shot) ─────────────────────────────────────────────────
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bookworm-migrate
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV:    production
+      DB_HOST:     postgres
+      DB_PORT:     5432
+      DB_NAME:     ${DB_NAME:-bookworm}
+      DB_USER:     ${DB_USER:-bookworm}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+    # Run migrate then seed — exits 0 when done
+    command: >
+      sh -c "node -e \"require('./dist/db/migrate')\" &&
+             node -e \"require('./dist/db/seed')\""
+
+  # ── Shell (port 3000) ───────────────────────────────────────────────────────
+  shell:
+    build:
+      context: .
+      dockerfile: shell/Dockerfile
+    container_name: bookworm-shell
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:3000:3000"
+
+  # ── mfe-auth (port 3001) ────────────────────────────────────────────────────
+  mfe-auth:
+    build:
+      context: .
+      dockerfile: mfe-auth/Dockerfile
+    container_name: bookworm-mfe-auth
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3001"
+
+  # ── mfe-store (port 3002) ───────────────────────────────────────────────────
+  mfe-store:
+    build:
+      context: .
+      dockerfile: mfe-store/Dockerfile
+    container_name: bookworm-mfe-store
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3002:3002"
+
+  # ── mfe-checkout (port 3003) ────────────────────────────────────────────────
+  mfe-checkout:
+    build:
+      context: .
+      dockerfile: mfe-checkout/Dockerfile
+    container_name: bookworm-mfe-checkout
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3003:3003"
+
+volumes:
+  postgres_data:
+    driver: local

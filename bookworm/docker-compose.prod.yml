@@ -1,0 +1,226 @@
+# ── BookWorm — Production Docker Compose ──────────────────────────────────────
+# Uses Traefik as a reverse proxy for:
+#   - Automatic HTTPS via Let's Encrypt
+#   - All services reachable through a single public IP on ports 80 / 443
+#   - Backend API proxied at https://<DOMAIN>/api/*
+#
+# Usage on the server:
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+#
+# Required env vars (set in .env.production):
+#   DOMAIN, ACME_EMAIL, DB_PASSWORD, JWT_SECRET, JWT_REFRESH_SECRET
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Traefik — reverse proxy + TLS termination ───────────────────────────────
+  traefik:
+    image: traefik:v3.1
+    container_name: bookworm-traefik
+    restart: unless-stopped
+    command:
+      # Enable Docker provider — reads labels from other containers
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      # Entrypoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      # Redirect all HTTP → HTTPS
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      # Let's Encrypt — TLS certificates issued automatically
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:?ACME_EMAIL is required}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      # Disable Traefik dashboard in production
+      - "--api.dashboard=false"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Socket — lets Traefik read Docker labels
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Persist TLS certificates across container restarts
+      - letsencrypt:/letsencrypt
+    networks:
+      - proxy
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: bookworm-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     ${DB_USER:-bookworm}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      POSTGRES_DB:       ${DB_NAME:-bookworm}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # NOT exposed publicly — only reachable by backend on the internal network
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-bookworm} -d ${DB_NAME:-bookworm}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── DB Migration (one-shot) ─────────────────────────────────────────────────
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bookworm-migrate
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV:    production
+      DB_HOST:     postgres
+      DB_PORT:     5432
+      DB_NAME:     ${DB_NAME:-bookworm}
+      DB_USER:     ${DB_USER:-bookworm}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+    command: >
+      sh -c "node -e \"require('./dist/db/migrate')\" &&
+             node -e \"require('./dist/db/seed')\""
+    networks:
+      - internal
+
+  # ── Backend API — proxied at https://<DOMAIN>/api/* ─────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bookworm-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV:               production
+      PORT:                   5000
+      DB_HOST:                postgres
+      DB_PORT:                5432
+      DB_NAME:                ${DB_NAME:-bookworm}
+      DB_USER:                ${DB_USER:-bookworm}
+      DB_PASSWORD:            ${DB_PASSWORD:?DB_PASSWORD is required}
+      JWT_SECRET:             ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_REFRESH_SECRET:     ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+      JWT_EXPIRES_IN:         ${JWT_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=bookworm_proxy"
+      # Route /api/* → backend (strip the /api prefix before forwarding)
+      - "traefik.http.routers.backend.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.strip-api.stripprefix.prefixes=/api"
+      - "traefik.http.routers.backend.middlewares=strip-api"
+      - "traefik.http.services.backend.loadbalancer.server.port=5000"
+    networks:
+      - internal
+      - proxy
+
+  # ── Shell (main SPA) — https://<DOMAIN>/ ────────────────────────────────────
+  shell:
+    build:
+      context: .
+      dockerfile: shell/Dockerfile
+      args:
+        # MFE remoteEntry URLs baked in at build time
+        MFE_AUTH_URL:     "https://${DOMAIN}/mfe-auth"
+        MFE_STORE_URL:    "https://${DOMAIN}/mfe-store"
+        MFE_CHECKOUT_URL: "https://${DOMAIN}/mfe-checkout"
+        # Backend API base URL — Traefik strips /api prefix before forwarding
+        API_BASE_URL:     "https://${DOMAIN}/api"
+    container_name: bookworm-shell
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=bookworm_proxy"
+      - "traefik.http.routers.shell.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.shell.entrypoints=websecure"
+      - "traefik.http.routers.shell.tls.certresolver=letsencrypt"
+      - "traefik.http.services.shell.loadbalancer.server.port=3000"
+    networks:
+      - proxy
+
+  # ── mfe-auth — https://<DOMAIN>/mfe-auth/ ───────────────────────────────────
+  mfe-auth:
+    build:
+      context: .
+      dockerfile: mfe-auth/Dockerfile
+      args:
+        API_BASE_URL: "https://${DOMAIN}/api"
+    container_name: bookworm-mfe-auth
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=bookworm_proxy"
+      - "traefik.http.routers.mfe-auth.rule=Host(`${DOMAIN}`) && PathPrefix(`/mfe-auth`)"
+      - "traefik.http.routers.mfe-auth.entrypoints=websecure"
+      - "traefik.http.routers.mfe-auth.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.strip-mfe-auth.stripprefix.prefixes=/mfe-auth"
+      - "traefik.http.routers.mfe-auth.middlewares=strip-mfe-auth"
+      - "traefik.http.services.mfe-auth.loadbalancer.server.port=3001"
+    networks:
+      - proxy
+
+  # ── mfe-store — https://<DOMAIN>/mfe-store/ ─────────────────────────────────
+  mfe-store:
+    build:
+      context: .
+      dockerfile: mfe-store/Dockerfile
+      args:
+        API_BASE_URL: "https://${DOMAIN}/api"
+    container_name: bookworm-mfe-store
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=bookworm_proxy"
+      - "traefik.http.routers.mfe-store.rule=Host(`${DOMAIN}`) && PathPrefix(`/mfe-store`)"
+      - "traefik.http.routers.mfe-store.entrypoints=websecure"
+      - "traefik.http.routers.mfe-store.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.strip-mfe-store.stripprefix.prefixes=/mfe-store"
+      - "traefik.http.routers.mfe-store.middlewares=strip-mfe-store"
+      - "traefik.http.services.mfe-store.loadbalancer.server.port=3002"
+    networks:
+      - proxy
+
+  # ── mfe-checkout — https://<DOMAIN>/mfe-checkout/ ───────────────────────────
+  mfe-checkout:
+    build:
+      context: .
+      dockerfile: mfe-checkout/Dockerfile
+      args:
+        API_BASE_URL: "https://${DOMAIN}/api"
+    container_name: bookworm-mfe-checkout
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=bookworm_proxy"
+      - "traefik.http.routers.mfe-checkout.rule=Host(`${DOMAIN}`) && PathPrefix(`/mfe-checkout`)"
+      - "traefik.http.routers.mfe-checkout.entrypoints=websecure"
+      - "traefik.http.routers.mfe-checkout.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.strip-mfe-checkout.stripprefix.prefixes=/mfe-checkout"
+      - "traefik.http.routers.mfe-checkout.middlewares=strip-mfe-checkout"
+      - "traefik.http.services.mfe-checkout.loadbalancer.server.port=3003"
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    name: bookworm_proxy
+    driver: bridge
+  internal:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  letsencrypt:
+    driver: local

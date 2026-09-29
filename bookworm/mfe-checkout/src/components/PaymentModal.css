@@ -1,0 +1,161 @@
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.modal-box {
+  background-color: #1a1a2e;
+  border: 1px solid #2a2a4a;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modal-in 0.2s ease-out;
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);   }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #2a2a4a;
+}
+
+.modal-title {
+  color: #e8e8f0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.modal-amount {
+  color: #b0b0c8;
+  font-size: 14px;
+}
+.modal-amount strong { color: #e8e8f0; }
+
+.modal-body { padding: 20px 24px; }
+
+/* Payment method tabs */
+.modal-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  width: 140px;
+  float: left;
+  margin-right: 24px;
+}
+
+.modal-method-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #2a2a4a;
+  color: #8888a8;
+  font-size: 13px;
+  padding: 11px 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+.modal-method-btn:last-child { border-bottom: none; }
+.modal-method-btn:hover { background-color: #22223a; color: #e8e8f0; }
+.modal-method-btn--active {
+  background-color: #22223a;
+  color: #e8e8f0;
+  font-weight: 600;
+  border-left: 2px solid #4a9eff;
+}
+
+/* Card fields */
+.modal-fields {
+  overflow: hidden;          /* clear float */
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modal-field-row {
+  display: flex;
+  gap: 14px;
+}
+
+.modal-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal-field label {
+  color: #8888a8;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.modal-field input {
+  background-color: #22223a;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: #e8e8f0;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.modal-field input:focus       { border-color: #4a9eff; }
+.modal-field input::placeholder{ color: #4a4a6a; }
+
+.modal-wallet-msg {
+  color: #b0b0c8;
+  font-size: 13px;
+  padding: 20px 0;
+}
+
+.modal-error {
+  color: #f87171;
+  font-size: 13px;
+  padding: 0 24px 12px;
+  background: rgba(239,68,68,0.08);
+  margin: 0 24px 12px;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.modal-footer {
+  padding: 16px 24px 20px;
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid #2a2a4a;
+  clear: both;
+}
+
+.btn-pay {
+  background-color: #4a9eff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 11px 28px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, opacity 0.2s;
+}
+.btn-pay:hover:not(:disabled)  { background-color: #3a8eef; }
+.btn-pay:disabled               { opacity: 0.6; cursor: not-allowed; }
