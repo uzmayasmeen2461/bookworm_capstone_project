@@ -20,6 +20,11 @@
 #        bookworm-backend  → ALLOWED_ORIGINS  (all 4 frontend URLs, comma-separated)
 #        bookworm-shell    → MFE_AUTH_URL / MFE_STORE_URL / MFE_CHECKOUT_URL
 #      Then click "Manual Deploy" on bookworm-shell.
+#
+# PATH NOTE:
+#   The repo root is capstone_project/ and the app lives in capstone_project/bookworm/.
+#   All dockerContext and dockerfilePath values are relative to the repo root,
+#   so they all carry the bookworm/ prefix.
 # ─────────────────────────────────────────────────────────────────────────────
 
 databases:
@@ -34,8 +39,8 @@ services:
   - type: web
     name: bookworm-backend
     runtime: docker
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    dockerfilePath: ./bookworm/backend/Dockerfile
+    dockerContext: ./bookworm/backend
     plan: free
     healthCheckPath: /health
     envVars:
@@ -77,15 +82,15 @@ services:
         sync: false
 
   # ── Shell SPA ────────────────────────────────────────────────────────────────
-  # dockerContext is the monorepo root so the Dockerfile can COPY shared/
+  # dockerContext is bookworm/ (monorepo root) so the Dockerfile can COPY shared/
   - type: web
     name: bookworm-shell
     runtime: docker
-    dockerfilePath: ./shell/Dockerfile
-    dockerContext: .
+    dockerfilePath: ./bookworm/shell/Dockerfile
+    dockerContext: ./bookworm
     plan: free
     envVars:
-      # These become Docker ARGs inside the Dockerfile at build time.
+      # These are forwarded as Docker ARGs at build time.
       # Update to your actual *.onrender.com URLs after first deploy,
       # then trigger a manual redeploy on this service.
       - key: MFE_AUTH_URL
@@ -101,8 +106,8 @@ services:
   - type: web
     name: bookworm-mfe-auth
     runtime: docker
-    dockerfilePath: ./mfe-auth/Dockerfile
-    dockerContext: .
+    dockerfilePath: ./bookworm/mfe-auth/Dockerfile
+    dockerContext: ./bookworm
     plan: free
     envVars:
       - key: API_BASE_URL
@@ -112,8 +117,8 @@ services:
   - type: web
     name: bookworm-mfe-store
     runtime: docker
-    dockerfilePath: ./mfe-store/Dockerfile
-    dockerContext: .
+    dockerfilePath: ./bookworm/mfe-store/Dockerfile
+    dockerContext: ./bookworm
     plan: free
     envVars:
       - key: API_BASE_URL
@@ -123,8 +128,8 @@ services:
   - type: web
     name: bookworm-mfe-checkout
     runtime: docker
-    dockerfilePath: ./mfe-checkout/Dockerfile
-    dockerContext: .
+    dockerfilePath: ./bookworm/mfe-checkout/Dockerfile
+    dockerContext: ./bookworm
     plan: free
     envVars:
       - key: API_BASE_URL
