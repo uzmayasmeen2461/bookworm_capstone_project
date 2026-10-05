@@ -1,8 +1,6 @@
 # ── Build stage ──────────────────────────────────────────────────────────────
 # shell MFE — builds a static webpack bundle, served by nginx at runtime.
-# MFE remote URLs and API base URL are baked in at build time via ARGs.
-# Override at docker build time:
-#   --build-arg MFE_AUTH_URL=https://example.com/mfe-auth
+# cache-bust: v2
 FROM node:20-alpine AS builder
 
 # ── Build-time args (passed from docker-compose.prod.yml) ────────────────────

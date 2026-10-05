@@ -1,4 +1,5 @@
 # ── Build stage ───────────────────────────────────────────────────────────────
+# cache-bust: v2
 FROM node:20-alpine AS builder
 
 ARG API_BASE_URL=https://bookworm-backend-275c.onrender.com

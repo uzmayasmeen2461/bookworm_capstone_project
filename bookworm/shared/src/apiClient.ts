@@ -1,13 +1,10 @@
 // Base API client — used by all MFEs to talk to the backend.
 // Centralises: base URL, auth header injection, token refresh, error handling.
 
-// API_BASE_URL is injected at build time by webpack DefinePlugin.
-// Development default: http://127.0.0.1:5000
-// Production:          https://<DOMAIN>/api  (set via MFE build args in docker-compose.prod.yml)
-declare const process: { env: { API_BASE_URL?: string } };
-const API_BASE: string = (typeof process !== 'undefined' && process.env.API_BASE_URL)
-  ? process.env.API_BASE_URL
-  : 'http://127.0.0.1:5000';
+// API_BASE_URL is replaced at build time by webpack DefinePlugin with the
+// literal string value — e.g. "https://bookworm-backend-275c.onrender.com".
+// The fallback only applies in Jest / non-webpack environments.
+const API_BASE: string = process.env.API_BASE_URL || 'http://127.0.0.1:5000';
 
 // ── Token storage (in-memory — safer than localStorage for JWTs) ─────────────
 // Each MFE webpack bundle gets its own module instance, so in-memory state is
