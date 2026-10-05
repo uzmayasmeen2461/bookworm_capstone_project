@@ -53,10 +53,18 @@ const startServer = async () => {
     if (parseInt(rows[0].count, 10) === 0) {
       console.info('[Seed] Empty database detected — running seed...');
       await seed();
+      console.info('[Seed] Completed successfully.');
+    } else {
+      console.info(`[Seed] Skipped — ${rows[0].count} books already in database.`);
     }
-  } catch {
-    // books table may not exist yet on very first run — migrations above create it
-    // seed will be called next startup once migrations have run
+  } catch (err: any) {
+    console.error('[Seed] Check failed:', err.message, '— attempting seed anyway...');
+    try {
+      await seed();
+      console.info('[Seed] Completed successfully.');
+    } catch (seedErr: any) {
+      console.error('[Seed] Failed:', seedErr.message);
+    }
   }
 
   app.listen(PORT, HOST, () => {
