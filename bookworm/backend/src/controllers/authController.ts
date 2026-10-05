@@ -128,7 +128,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
     });
-  } catch {
+  } catch (err: any) {
+    console.error('[Login] Error:', err.message);
     res.status(500).json({ error: 'Login failed' });
   }
 };
