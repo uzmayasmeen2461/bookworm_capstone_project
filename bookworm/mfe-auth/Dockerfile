@@ -1,7 +1,10 @@
 # ── Build stage ───────────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
 
-ARG API_BASE_URL=http://127.0.0.1:5000
+# API_BASE_URL is the backend URL baked into the webpack bundle at build time.
+# For local dev the default (localhost:5000) is used.
+# For Render this is overridden by setting API_BASE_URL in the build environment.
+ARG API_BASE_URL=https://bookworm-backend-275c.onrender.com
 ENV API_BASE_URL=$API_BASE_URL
 
 WORKDIR /workspace

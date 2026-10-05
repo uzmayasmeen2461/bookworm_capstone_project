@@ -6,10 +6,10 @@
 FROM node:20-alpine AS builder
 
 # ── Build-time args (passed from docker-compose.prod.yml) ────────────────────
-ARG MFE_AUTH_URL=http://localhost:3001
-ARG MFE_STORE_URL=http://localhost:3002
-ARG MFE_CHECKOUT_URL=http://localhost:3003
-ARG API_BASE_URL=http://127.0.0.1:5000
+ARG MFE_AUTH_URL=https://bookworm-mfe-auth.onrender.com
+ARG MFE_STORE_URL=https://bookworm-mfe-store.onrender.com
+ARG MFE_CHECKOUT_URL=https://bookworm-mfe-checkout.onrender.com
+ARG API_BASE_URL=https://bookworm-backend-275c.onrender.com
 
 # Expose as env vars so webpack.config.js can read them via process.env
 ENV MFE_AUTH_URL=$MFE_AUTH_URL

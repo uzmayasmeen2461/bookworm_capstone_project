@@ -1,7 +1,7 @@
 # ── Build stage ───────────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
 
-ARG API_BASE_URL=http://127.0.0.1:5000
+ARG API_BASE_URL=https://bookworm-backend-275c.onrender.com
 ENV API_BASE_URL=$API_BASE_URL
 
 WORKDIR /workspace
