@@ -67,6 +67,20 @@ const startServer = async () => {
     }
   }
 
+  // Always ensure the demo user exists — safe to run on every startup
+  try {
+    const bcrypt = await import('bcryptjs');
+    const passwordHash = await bcrypt.hash('Demo@1234', 12);
+    await pool.query(`
+      INSERT INTO users (name, email, password_hash, gift_points)
+      VALUES ('Demo User', 'demo@bookworm.com', $1, 100)
+      ON CONFLICT (email) DO NOTHING
+    `, [passwordHash]);
+    console.info('[Seed] Demo user ensured: demo@bookworm.com / Demo@1234');
+  } catch (err: any) {
+    console.error('[Seed] Demo user insert failed:', err.message);
+  }
+
   app.listen(PORT, HOST, () => {
     console.info(`[Server] BookWorm API running at http://${HOST}:${PORT}`);
     console.info(`[Server] API docs available at http://${HOST}:${PORT}/api-docs`);
