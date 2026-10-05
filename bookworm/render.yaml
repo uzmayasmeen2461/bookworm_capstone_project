@@ -29,7 +29,7 @@
 
 databases:
   - name: bookworm-db
-    databaseName: bookworm
+    databaseName: bookworm_q7dq
     user: bookworm
     plan: free
 
