@@ -100,7 +100,7 @@ services:
       - key: MFE_CHECKOUT_URL
         value: https://bookworm-mfe-checkout.onrender.com
       - key: API_BASE_URL
-        value: https://bookworm-backend.onrender.com
+        value: https://bookworm-backend-275c.onrender.com
 
   # ── mfe-auth ─────────────────────────────────────────────────────────────────
   - type: web
@@ -111,7 +111,7 @@ services:
     plan: free
     envVars:
       - key: API_BASE_URL
-        value: https://bookworm-backend.onrender.com
+        value: https://bookworm-backend-275c.onrender.com
 
   # ── mfe-store ────────────────────────────────────────────────────────────────
   - type: web
@@ -122,7 +122,7 @@ services:
     plan: free
     envVars:
       - key: API_BASE_URL
-        value: https://bookworm-backend.onrender.com
+        value: https://bookworm-backend-275c.onrender.com
 
   # ── mfe-checkout ─────────────────────────────────────────────────────────────
   - type: web
@@ -133,4 +133,4 @@ services:
     plan: free
     envVars:
       - key: API_BASE_URL
-        value: https://bookworm-backend.onrender.com
+        value: https://bookworm-backend-275c.onrender.com
